@@ -71,6 +71,12 @@ jobs:
       run: |
         $exePath="$(msbuild ports\windows\micropython.vcxproj -nologo -v:m -t:ShowTargetPath -property:Configuration=${{ matrix.configuration }} -property:Platform=${{ matrix.platform }} -property:PyVariant=${{ matrix.variant }})"
         echo ("micropython=" + $exePath.Trim()) >> $env:GITHUB_OUTPUT
+    - name: Upload micropython.exe
+      if: matrix.configuration == 'Release'
+      uses: actions/upload-artifact@v4
+      with:
+        name: micropython-windows-vs${{ matrix.visualstudio }}-${{ matrix.platform }}-${{ matrix.variant }}
+        path: ${{ steps.get_path.outputs.micropython }}
     - name: Run tests
       id: test
       env:
@@ -133,6 +139,11 @@ jobs:
       run: make -C ports/windows VARIANT=${{ matrix.variant }} submodules
     - name: Build micropython.exe
       run: make -C ports/windows -j2 VARIANT=${{ matrix.variant }}
+    - name: Upload micropython.exe
+      uses: actions/upload-artifact@v4
+      with:
+        name: micropython-windows-${{ matrix.sys }}-${{ matrix.variant }}
+        path: ports/windows/build-${{ matrix.variant }}/micropython.exe
     - name: Run tests
       id: test
       run: make -C ports/windows test_full VARIANT=${{ matrix.variant }}
