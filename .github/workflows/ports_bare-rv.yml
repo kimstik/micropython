@@ -1,0 +1,67 @@
+name: bare-rv port
+
+on:
+  push:
+  pull_request:
+    paths:
+      - '.github/workflows/ports_bare-rv.yml'
+      - 'py/**'
+      - 'extmod/**'
+      - 'shared/**'
+      - 'lib/**'
+      - 'ports/bare-rv/**'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  XPACK_GCC_VERSION: 15.2.0-1
+  XPACK_GCC_NAME: xpack-riscv-none-elf-gcc-15.2.0-1
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v6
+    - name: Cache xPack toolchain
+      id: cache-toolchain
+      uses: actions/cache@v4
+      with:
+        path: ${{ env.XPACK_GCC_NAME }}
+        key: ${{ env.XPACK_GCC_NAME }}-linux-x64
+    - name: Download xPack RISC-V toolchain
+      if: steps.cache-toolchain.outputs.cache-hit != 'true'
+      run: |
+        wget -q https://github.com/xpack-dev-tools/riscv-none-elf-gcc-xpack/releases/download/v${{ env.XPACK_GCC_VERSION }}/${{ env.XPACK_GCC_NAME }}-linux-x64.tar.gz
+        tar xf ${{ env.XPACK_GCC_NAME }}-linux-x64.tar.gz
+    - name: Setup toolchain path
+      run: echo "$PWD/${{ env.XPACK_GCC_NAME }}/bin" >> $GITHUB_PATH
+    - name: Build
+      run: make -C ports/bare-rv
+    - name: Upload firmware
+      uses: actions/upload-artifact@v4
+      with:
+        name: bare-rv-firmware
+        path: ports/bare-rv/build/firmware.*
+    - name: Build tiny (no compiler)
+      run: make -C ports/bare-rv clean && make -C ports/bare-rv MICROPY_ENABLE_COMPILER=0
+    - name: Upload firmware-tiny
+      uses: actions/upload-artifact@v4
+      with:
+        name: bare-rv-firmware-tiny
+        path: ports/bare-rv/build/firmware.*
+    - name: Build LTO
+      run: make -C ports/bare-rv clean && make -C ports/bare-rv CFLAGS_EXTRA=-flto
+    - name: Upload firmware-lto
+      uses: actions/upload-artifact@v4
+      with:
+        name: bare-rv-firmware-lto
+        path: ports/bare-rv/build/firmware.*
+    - name: Build tiny LTO
+      run: make -C ports/bare-rv clean && make -C ports/bare-rv MICROPY_ENABLE_COMPILER=0 CFLAGS_EXTRA=-flto
+    - name: Upload firmware-tiny-lto
+      uses: actions/upload-artifact@v4
+      with:
+        name: bare-rv-firmware-tiny-lto
+        path: ports/bare-rv/build/firmware.*
