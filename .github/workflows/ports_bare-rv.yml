@@ -39,35 +39,45 @@ jobs:
       run: echo "$PWD/${{ env.XPACK_GCC_NAME }}/bin" >> $GITHUB_PATH
     - name: Create output directory
       run: mkdir -p artifacts
-    - name: Build standard
-      run: |
-        make -C ports/bare-rv
-        cp ports/bare-rv/build/firmware.bin artifacts/firmware-standard.bin
-        cp ports/bare-rv/build/firmware.elf artifacts/firmware-standard.elf
-    - name: Build tiny (no compiler)
-      run: |
-        make -C ports/bare-rv clean
-        make -C ports/bare-rv MICROPY_ENABLE_COMPILER=0
-        cp ports/bare-rv/build/firmware.bin artifacts/firmware-tiny.bin
-        cp ports/bare-rv/build/firmware.elf artifacts/firmware-tiny.elf
-    - name: Build LTO
-      run: |
-        make -C ports/bare-rv clean
-        make -C ports/bare-rv CFLAGS_EXTRA=-flto
-        cp ports/bare-rv/build/firmware.bin artifacts/firmware-lto.bin
-        cp ports/bare-rv/build/firmware.elf artifacts/firmware-lto.elf
     # DO NOT REMOVE: -fmerge-all-constants breaks runtime on CH592
     # XXXS flags proven by ablation study (see rv-opts.md):
-    # - -msave-restore: -3900 bytes (RISC-V millicode)
-    # - -fipa-pta: -320 bytes
-    # - -flto-partition=one: -117 bytes
-    # - -fmodulo-sched: -4 bytes
-    - name: Build XXXS (extreme size)
+    # -msave-restore:-3900, -fipa-pta:-320, -flto-partition=one:-117, -fmodulo-sched:-72
+    # firmware = with compiler, firmware-noc = no compiler
+    - name: Build firmware
+      run: |
+        make -C ports/bare-rv
+        cp ports/bare-rv/build/firmware.bin artifacts/firmware.bin
+        cp ports/bare-rv/build/firmware.elf artifacts/firmware.elf
+    - name: Build firmware-lto
+      run: |
+        make -C ports/bare-rv clean
+        make -C ports/bare-rv CFLAGS_EXTRA="-flto"
+        cp ports/bare-rv/build/firmware.bin artifacts/firmware-lto.bin
+        cp ports/bare-rv/build/firmware.elf artifacts/firmware-lto.elf
+    - name: Build firmware-xxxs
       run: |
         make -C ports/bare-rv clean
         make -C ports/bare-rv CFLAGS_EXTRA="-Oz -flto -flto-partition=one -fipa-pta -msave-restore -fmodulo-sched"
         cp ports/bare-rv/build/firmware.bin artifacts/firmware-xxxs.bin
         cp ports/bare-rv/build/firmware.elf artifacts/firmware-xxxs.elf
+    - name: Build firmware-noc
+      run: |
+        make -C ports/bare-rv clean
+        make -C ports/bare-rv MICROPY_ENABLE_COMPILER=0
+        cp ports/bare-rv/build/firmware.bin artifacts/firmware-noc.bin
+        cp ports/bare-rv/build/firmware.elf artifacts/firmware-noc.elf
+    - name: Build firmware-noc-lto
+      run: |
+        make -C ports/bare-rv clean
+        make -C ports/bare-rv MICROPY_ENABLE_COMPILER=0 CFLAGS_EXTRA="-flto"
+        cp ports/bare-rv/build/firmware.bin artifacts/firmware-noc-lto.bin
+        cp ports/bare-rv/build/firmware.elf artifacts/firmware-noc-lto.elf
+    - name: Build firmware-noc-xxxs
+      run: |
+        make -C ports/bare-rv clean
+        make -C ports/bare-rv MICROPY_ENABLE_COMPILER=0 CFLAGS_EXTRA="-Oz -flto -flto-partition=one -fipa-pta -msave-restore -fmodulo-sched"
+        cp ports/bare-rv/build/firmware.bin artifacts/firmware-noc-xxxs.bin
+        cp ports/bare-rv/build/firmware.elf artifacts/firmware-noc-xxxs.elf
     - name: Upload all firmware
       uses: actions/upload-artifact@v4
       with:
