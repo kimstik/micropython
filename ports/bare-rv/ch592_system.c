@@ -27,6 +27,11 @@
 #include <stdint.h>
 #include <string.h>
 
+// CH592 GPIO registers
+#define R32_PB_DIR          (*(volatile uint32_t *)0x400010C0)
+#define R32_PB_OUT          (*(volatile uint32_t *)0x400010C8)
+#define GPIO_Pin_10         (1 << 10)
+
 // CH592 UART0 registers
 #define R8_UART0_IER        (*(volatile uint8_t *)0x40003001)
 #define R8_UART0_FCR        (*(volatile uint8_t *)0x40003002)
@@ -67,17 +72,24 @@ void Reset_Handler(void) {
     memcpy(&_sdata, &_sidata, (char *)&_edata - (char *)&_sdata);
     memset(&_sbss, 0, (char *)&_ebss - (char *)&_sbss);
 
-    // UART0: 115200 baud @ 60MHz, 8N1
-    // Divisor = (10 * 60000000 / 8 / 115200 + 5) / 10 = 65
-    R16_UART0_DL = 65;
+    // PB10 as output for debug
+    R32_PB_DIR |= GPIO_Pin_10;
+    R32_PB_OUT |= GPIO_Pin_10;  // Set high on entry
+
+    // UART0: 115200 baud @ 32MHz (default clock), 8N1
+    // Divisor = (10 * 32000000 / 8 / 115200 + 5) / 10 = 35
+    R16_UART0_DL = 35;
     R8_UART0_FCR = RB_FCR_FIFO_TRIG_2B | RB_FCR_TX_FIFO_CLR | RB_FCR_RX_FIFO_CLR | RB_FCR_FIFO_EN;
     R8_UART0_LCR = RB_LCR_WORD_SZ;
     R8_UART0_IER = RB_IER_TXD_EN;
     R8_UART0_DIV = 1;
 
+    R32_PB_OUT ^= GPIO_Pin_10;  // Toggle before bare_main
+
     bare_main();
 
     for (;;) {
+        R32_PB_OUT ^= GPIO_Pin_10;  // Toggle in idle loop
     }
 }
 
