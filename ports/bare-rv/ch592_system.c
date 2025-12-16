@@ -32,7 +32,6 @@
 #define R32_PB_OUT          (*(volatile uint32_t *)0x400010C8)
 #define R32_PB_PD_DRV       (*(volatile uint32_t *)0x400010D4)
 #define GPIO_Pin_7          (1 << 7)
-#define GPIO_Pin_10         (1 << 10)
 
 // CH592 UART0 registers
 #define R8_UART0_IER        (*(volatile uint8_t *)0x40003001)
@@ -54,7 +53,6 @@
 
 extern uint32_t _sidata, _sdata, _edata, _sbss, _ebss, _eusrstack;
 
-static inline void uart_write_char(int c);
 void Reset_Handler(void) __attribute__((naked, section(".init")));
 void bare_main(void);
 
@@ -75,30 +73,23 @@ void Reset_Handler(void) {
     memcpy(&_sdata, &_sidata, (char *)&_edata - (char *)&_sdata);
     memset(&_sbss, 0, (char *)&_ebss - (char *)&_sbss);
 
-    // PB10 as output for debug
-    R32_PB_DIR |= GPIO_Pin_10;
-    R32_PB_OUT |= GPIO_Pin_10;  // Set high on entry
-
     // PB7 (TXD0) as push-pull output 5mA
     R32_PB_OUT |= GPIO_Pin_7;
     R32_PB_DIR |= GPIO_Pin_7;
     R32_PB_PD_DRV &= ~GPIO_Pin_7;
 
-    // UART0: 115200 baud @ 32MHz (default clock), 8N1
-    // Divisor = (10 * 32000000 / 8 / 115200 + 5) / 10 = 35
-    R16_UART0_DL = 35;
+    // UART0: 115200 baud, 8N1
+    // Default clock after reset: 32MHz / 5 = 6.4MHz (see CH592SFR.h)
+    // Divisor = 6400000 / 8 / 115200 = 6.94 ≈ 7
+    R16_UART0_DL = 7;
     R8_UART0_FCR = RB_FCR_FIFO_TRIG_2B | RB_FCR_TX_FIFO_CLR | RB_FCR_RX_FIFO_CLR | RB_FCR_FIFO_EN;
     R8_UART0_LCR = RB_LCR_WORD_SZ;
     R8_UART0_IER = RB_IER_TXD_EN;
     R8_UART0_DIV = 1;
 
-    R32_PB_OUT ^= GPIO_Pin_10;  // Toggle before bare_main
-
     bare_main();
 
     for (;;) {
-        R32_PB_OUT ^= GPIO_Pin_10;  // Toggle in idle loop
-        uart_write_char('.');
     }
 }
 
