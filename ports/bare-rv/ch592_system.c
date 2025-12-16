@@ -52,6 +52,7 @@
 
 extern uint32_t _sidata, _sdata, _edata, _sbss, _ebss, _eusrstack;
 
+static inline void uart_write_char(int c);
 void Reset_Handler(void) __attribute__((naked, section(".init")));
 void bare_main(void);
 
