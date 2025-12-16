@@ -57,31 +57,89 @@ jobs:
         cp ports/bare-rv/build/firmware.bin artifacts/firmware-lto.bin
         cp ports/bare-rv/build/firmware.elf artifacts/firmware-lto.elf
     # DO NOT REMOVE: -fmerge-all-constants breaks runtime on CH592
+    # XXXS = proven flags + ARM flags for testing
+    # Proven: -Oz -flto -flto-partition=one -fipa-pta -msave-restore
+    # ARM test: 20=ftree-pre 21=fgcse-after-reload 22=finline-small-functions 23=frename-registers
+    #           24=fira-loop-pressure 25=fira-region=all 26=fno-jump-tables 27=foptimize-strlen
+    #           28=fno-cse-follow-jumps 29=fmodulo-sched 30=fmodulo-sched-allow-regmoves
+    #           31=fsection-anchors 32=fschedule-insns
     - name: Build XXXS (extreme size)
       run: |
         make -C ports/bare-rv clean
-        make -C ports/bare-rv CFLAGS_EXTRA="-Oz -flto -flto-partition=one -fipa-pta -fipa-icf -fipa-sra -fipa-reference -flive-range-shrinkage -fira-share-save-slots -fira-share-spill-slots -ftree-tail-merge -fcode-hoisting -msave-restore -fconserve-stack -fno-ident -fno-common -fno-unwind-tables -fno-asynchronous-unwind-tables -fno-stack-protector -Wl,-O2 -Wl,--sort-section=alignment"
+        make -C ports/bare-rv CFLAGS_EXTRA="-Oz -flto -flto-partition=one -fipa-pta -msave-restore -ftree-pre -fgcse-after-reload -finline-small-functions -frename-registers -fira-loop-pressure -fira-region=all -fno-jump-tables -foptimize-strlen -fno-cse-follow-jumps -fmodulo-sched -fmodulo-sched-allow-regmoves -fsection-anchors -fschedule-insns"
         cp ports/bare-rv/build/firmware.bin artifacts/firmware-xxxs.bin
         cp ports/bare-rv/build/firmware.elf artifacts/firmware-xxxs.elf
-    # Test new flags from ARM (potentially useful for RV)
-    - name: Build XXXS1 (xxxs + tree-pre, gcse-after-reload, inline-small-functions, rename-registers)
+    # Ablation study pass 2: test ARM flags
+    - name: "Build 0 (all flags)"
       run: |
         make -C ports/bare-rv clean
-        make -C ports/bare-rv CFLAGS_EXTRA="-Oz -flto -flto-partition=one -fipa-pta -fipa-icf -fipa-sra -fipa-reference -flive-range-shrinkage -fira-share-save-slots -fira-share-spill-slots -ftree-tail-merge -fcode-hoisting -msave-restore -fconserve-stack -fno-ident -fno-common -fno-unwind-tables -fno-asynchronous-unwind-tables -fno-stack-protector -Wl,-O2 -Wl,--sort-section=alignment -ftree-pre -fgcse-after-reload -finline-small-functions -frename-registers"
-        cp ports/bare-rv/build/firmware.bin artifacts/firmware-xxxs1.bin
-        cp ports/bare-rv/build/firmware.elf artifacts/firmware-xxxs1.elf
-    - name: Build XXXS2 (xxxs + ira-loop-pressure, ira-region=all, no-jump-tables, optimize-strlen, no-cse-follow-jumps)
+        make -C ports/bare-rv CFLAGS_EXTRA="-Oz -flto -flto-partition=one -fipa-pta -msave-restore -ftree-pre -fgcse-after-reload -finline-small-functions -frename-registers -fira-loop-pressure -fira-region=all -fno-jump-tables -foptimize-strlen -fno-cse-follow-jumps -fmodulo-sched -fmodulo-sched-allow-regmoves -fsection-anchors -fschedule-insns"
+        cp ports/bare-rv/build/firmware.bin artifacts/0.bin
+    - name: "Build 1 (-ftree-pre)"
       run: |
         make -C ports/bare-rv clean
-        make -C ports/bare-rv CFLAGS_EXTRA="-Oz -flto -flto-partition=one -fipa-pta -fipa-icf -fipa-sra -fipa-reference -flive-range-shrinkage -fira-share-save-slots -fira-share-spill-slots -ftree-tail-merge -fcode-hoisting -msave-restore -fconserve-stack -fno-ident -fno-common -fno-unwind-tables -fno-asynchronous-unwind-tables -fno-stack-protector -Wl,-O2 -Wl,--sort-section=alignment -fira-loop-pressure -fira-region=all -fno-jump-tables -foptimize-strlen -fno-cse-follow-jumps"
-        cp ports/bare-rv/build/firmware.bin artifacts/firmware-xxxs2.bin
-        cp ports/bare-rv/build/firmware.elf artifacts/firmware-xxxs2.elf
-    - name: Build XXXS3 (xxxs + modulo-sched, modulo-sched-allow-regmoves, section-anchors, schedule-insns)
+        make -C ports/bare-rv CFLAGS_EXTRA="-Oz -flto -flto-partition=one -fipa-pta -msave-restore -fgcse-after-reload -finline-small-functions -frename-registers -fira-loop-pressure -fira-region=all -fno-jump-tables -foptimize-strlen -fno-cse-follow-jumps -fmodulo-sched -fmodulo-sched-allow-regmoves -fsection-anchors -fschedule-insns"
+        cp ports/bare-rv/build/firmware.bin artifacts/1.bin
+    - name: "Build 2 (-fgcse-after-reload)"
       run: |
         make -C ports/bare-rv clean
-        make -C ports/bare-rv CFLAGS_EXTRA="-Oz -flto -flto-partition=one -fipa-pta -fipa-icf -fipa-sra -fipa-reference -flive-range-shrinkage -fira-share-save-slots -fira-share-spill-slots -ftree-tail-merge -fcode-hoisting -msave-restore -fconserve-stack -fno-ident -fno-common -fno-unwind-tables -fno-asynchronous-unwind-tables -fno-stack-protector -Wl,-O2 -Wl,--sort-section=alignment -fmodulo-sched -fmodulo-sched-allow-regmoves -fsection-anchors -fschedule-insns"
-        cp ports/bare-rv/build/firmware.bin artifacts/firmware-xxxs3.bin
-        cp ports/bare-rv/build/firmware.elf artifacts/firmware-xxxs3.elf
+        make -C ports/bare-rv CFLAGS_EXTRA="-Oz -flto -flto-partition=one -fipa-pta -msave-restore -ftree-pre -finline-small-functions -frename-registers -fira-loop-pressure -fira-region=all -fno-jump-tables -foptimize-strlen -fno-cse-follow-jumps -fmodulo-sched -fmodulo-sched-allow-regmoves -fsection-anchors -fschedule-insns"
+        cp ports/bare-rv/build/firmware.bin artifacts/2.bin
+    - name: "Build 3 (-finline-small-functions)"
+      run: |
+        make -C ports/bare-rv clean
+        make -C ports/bare-rv CFLAGS_EXTRA="-Oz -flto -flto-partition=one -fipa-pta -msave-restore -ftree-pre -fgcse-after-reload -frename-registers -fira-loop-pressure -fira-region=all -fno-jump-tables -foptimize-strlen -fno-cse-follow-jumps -fmodulo-sched -fmodulo-sched-allow-regmoves -fsection-anchors -fschedule-insns"
+        cp ports/bare-rv/build/firmware.bin artifacts/3.bin
+    - name: "Build 4 (-frename-registers)"
+      run: |
+        make -C ports/bare-rv clean
+        make -C ports/bare-rv CFLAGS_EXTRA="-Oz -flto -flto-partition=one -fipa-pta -msave-restore -ftree-pre -fgcse-after-reload -finline-small-functions -fira-loop-pressure -fira-region=all -fno-jump-tables -foptimize-strlen -fno-cse-follow-jumps -fmodulo-sched -fmodulo-sched-allow-regmoves -fsection-anchors -fschedule-insns"
+        cp ports/bare-rv/build/firmware.bin artifacts/4.bin
+    - name: "Build 5 (-fira-loop-pressure)"
+      run: |
+        make -C ports/bare-rv clean
+        make -C ports/bare-rv CFLAGS_EXTRA="-Oz -flto -flto-partition=one -fipa-pta -msave-restore -ftree-pre -fgcse-after-reload -finline-small-functions -frename-registers -fira-region=all -fno-jump-tables -foptimize-strlen -fno-cse-follow-jumps -fmodulo-sched -fmodulo-sched-allow-regmoves -fsection-anchors -fschedule-insns"
+        cp ports/bare-rv/build/firmware.bin artifacts/5.bin
+    - name: "Build 6 (-fira-region=all)"
+      run: |
+        make -C ports/bare-rv clean
+        make -C ports/bare-rv CFLAGS_EXTRA="-Oz -flto -flto-partition=one -fipa-pta -msave-restore -ftree-pre -fgcse-after-reload -finline-small-functions -frename-registers -fira-loop-pressure -fno-jump-tables -foptimize-strlen -fno-cse-follow-jumps -fmodulo-sched -fmodulo-sched-allow-regmoves -fsection-anchors -fschedule-insns"
+        cp ports/bare-rv/build/firmware.bin artifacts/6.bin
+    - name: "Build 7 (-fno-jump-tables)"
+      run: |
+        make -C ports/bare-rv clean
+        make -C ports/bare-rv CFLAGS_EXTRA="-Oz -flto -flto-partition=one -fipa-pta -msave-restore -ftree-pre -fgcse-after-reload -finline-small-functions -frename-registers -fira-loop-pressure -fira-region=all -foptimize-strlen -fno-cse-follow-jumps -fmodulo-sched -fmodulo-sched-allow-regmoves -fsection-anchors -fschedule-insns"
+        cp ports/bare-rv/build/firmware.bin artifacts/7.bin
+    - name: "Build 8 (-foptimize-strlen)"
+      run: |
+        make -C ports/bare-rv clean
+        make -C ports/bare-rv CFLAGS_EXTRA="-Oz -flto -flto-partition=one -fipa-pta -msave-restore -ftree-pre -fgcse-after-reload -finline-small-functions -frename-registers -fira-loop-pressure -fira-region=all -fno-jump-tables -fno-cse-follow-jumps -fmodulo-sched -fmodulo-sched-allow-regmoves -fsection-anchors -fschedule-insns"
+        cp ports/bare-rv/build/firmware.bin artifacts/8.bin
+    - name: "Build 9 (-fno-cse-follow-jumps)"
+      run: |
+        make -C ports/bare-rv clean
+        make -C ports/bare-rv CFLAGS_EXTRA="-Oz -flto -flto-partition=one -fipa-pta -msave-restore -ftree-pre -fgcse-after-reload -finline-small-functions -frename-registers -fira-loop-pressure -fira-region=all -fno-jump-tables -foptimize-strlen -fmodulo-sched -fmodulo-sched-allow-regmoves -fsection-anchors -fschedule-insns"
+        cp ports/bare-rv/build/firmware.bin artifacts/9.bin
+    - name: "Build 10 (-fmodulo-sched)"
+      run: |
+        make -C ports/bare-rv clean
+        make -C ports/bare-rv CFLAGS_EXTRA="-Oz -flto -flto-partition=one -fipa-pta -msave-restore -ftree-pre -fgcse-after-reload -finline-small-functions -frename-registers -fira-loop-pressure -fira-region=all -fno-jump-tables -foptimize-strlen -fno-cse-follow-jumps -fmodulo-sched-allow-regmoves -fsection-anchors -fschedule-insns"
+        cp ports/bare-rv/build/firmware.bin artifacts/10.bin
+    - name: "Build 11 (-fmodulo-sched-allow-regmoves)"
+      run: |
+        make -C ports/bare-rv clean
+        make -C ports/bare-rv CFLAGS_EXTRA="-Oz -flto -flto-partition=one -fipa-pta -msave-restore -ftree-pre -fgcse-after-reload -finline-small-functions -frename-registers -fira-loop-pressure -fira-region=all -fno-jump-tables -foptimize-strlen -fno-cse-follow-jumps -fmodulo-sched -fsection-anchors -fschedule-insns"
+        cp ports/bare-rv/build/firmware.bin artifacts/11.bin
+    - name: "Build 12 (-fsection-anchors)"
+      run: |
+        make -C ports/bare-rv clean
+        make -C ports/bare-rv CFLAGS_EXTRA="-Oz -flto -flto-partition=one -fipa-pta -msave-restore -ftree-pre -fgcse-after-reload -finline-small-functions -frename-registers -fira-loop-pressure -fira-region=all -fno-jump-tables -foptimize-strlen -fno-cse-follow-jumps -fmodulo-sched -fmodulo-sched-allow-regmoves -fschedule-insns"
+        cp ports/bare-rv/build/firmware.bin artifacts/12.bin
+    - name: "Build 13 (-fschedule-insns)"
+      run: |
+        make -C ports/bare-rv clean
+        make -C ports/bare-rv CFLAGS_EXTRA="-Oz -flto -flto-partition=one -fipa-pta -msave-restore -ftree-pre -fgcse-after-reload -finline-small-functions -frename-registers -fira-loop-pressure -fira-region=all -fno-jump-tables -foptimize-strlen -fno-cse-follow-jumps -fmodulo-sched -fmodulo-sched-allow-regmoves -fsection-anchors"
+        cp ports/bare-rv/build/firmware.bin artifacts/13.bin
     - name: Upload all firmware
       uses: actions/upload-artifact@v4
       with:
