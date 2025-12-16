@@ -90,6 +90,7 @@ void Reset_Handler(void) {
 
     for (;;) {
         R32_PB_OUT ^= GPIO_Pin_10;  // Toggle in idle loop
+        uart_write_char('.');
     }
 }
 
