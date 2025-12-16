@@ -62,28 +62,28 @@ jobs:
     #     make -C ports/bare-rv MICROPY_ENABLE_COMPILER=0 CFLAGS_EXTRA=-flto
     #     cp ports/bare-rv/build/firmware.bin artifacts/firmware-tiny-lto.bin
     #     cp ports/bare-rv/build/firmware.elf artifacts/firmware-tiny-lto.elf
-    - name: Build XXXS (base - stable)
+    - name: Build XXXS (stable - base + IPA/IRA + stripping)
       run: |
         make -C ports/bare-rv clean
-        make -C ports/bare-rv CFLAGS_EXTRA="-Oz -flto -flto-partition=one"
+        make -C ports/bare-rv CFLAGS_EXTRA="-Oz -flto -flto-partition=one -fipa-pta -fipa-icf -fipa-sra -fipa-reference -flive-range-shrinkage -fira-share-save-slots -fira-share-spill-slots -fno-common -fno-unwind-tables -fno-asynchronous-unwind-tables -fno-stack-protector -Wl,-O2 -Wl,--sort-section=alignment"
         cp ports/bare-rv/build/firmware.bin artifacts/firmware-xxxs.bin
         cp ports/bare-rv/build/firmware.elf artifacts/firmware-xxxs.elf
-    - name: Build XXXS1 (base + IPA/IRA)
+    - name: Build XXXS1 (base + tail-merge, code-hoisting)
       run: |
         make -C ports/bare-rv clean
-        make -C ports/bare-rv CFLAGS_EXTRA="-Oz -flto -flto-partition=one -fipa-pta -fipa-icf -fipa-sra -fipa-reference -flive-range-shrinkage -fira-share-save-slots -fira-share-spill-slots"
+        make -C ports/bare-rv CFLAGS_EXTRA="-Oz -flto -flto-partition=one -ftree-tail-merge -fcode-hoisting"
         cp ports/bare-rv/build/firmware.bin artifacts/firmware-xxxs1.bin
         cp ports/bare-rv/build/firmware.elf artifacts/firmware-xxxs1.elf
-    - name: Build XXXS2 (base + code transforms)
+    - name: Build XXXS2 (base + merge-constants, save-restore)
       run: |
         make -C ports/bare-rv clean
-        make -C ports/bare-rv CFLAGS_EXTRA="-Oz -flto -flto-partition=one -ftree-tail-merge -fcode-hoisting -fmerge-all-constants -msave-restore -fconserve-stack -fno-ident"
+        make -C ports/bare-rv CFLAGS_EXTRA="-Oz -flto -flto-partition=one -fmerge-all-constants -msave-restore"
         cp ports/bare-rv/build/firmware.bin artifacts/firmware-xxxs2.bin
         cp ports/bare-rv/build/firmware.elf artifacts/firmware-xxxs2.elf
-    - name: Build XXXS3 (base + stripping/linker)
+    - name: Build XXXS3 (base + conserve-stack, no-ident)
       run: |
         make -C ports/bare-rv clean
-        make -C ports/bare-rv CFLAGS_EXTRA="-Oz -flto -flto-partition=one -fno-common -fno-unwind-tables -fno-asynchronous-unwind-tables -fno-stack-protector -Wl,-O2 -Wl,--sort-section=alignment"
+        make -C ports/bare-rv CFLAGS_EXTRA="-Oz -flto -flto-partition=one -fconserve-stack -fno-ident"
         cp ports/bare-rv/build/firmware.bin artifacts/firmware-xxxs3.bin
         cp ports/bare-rv/build/firmware.elf artifacts/firmware-xxxs3.elf
     # - name: Build tiny XXXS (extreme size, no compiler)
