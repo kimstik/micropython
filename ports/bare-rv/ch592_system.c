@@ -30,6 +30,8 @@
 // CH592 GPIO registers
 #define R32_PB_DIR          (*(volatile uint32_t *)0x400010C0)
 #define R32_PB_OUT          (*(volatile uint32_t *)0x400010C8)
+#define R32_PB_PD_DRV       (*(volatile uint32_t *)0x400010D4)
+#define GPIO_Pin_7          (1 << 7)
 #define GPIO_Pin_10         (1 << 10)
 
 // CH592 UART0 registers
@@ -76,6 +78,11 @@ void Reset_Handler(void) {
     // PB10 as output for debug
     R32_PB_DIR |= GPIO_Pin_10;
     R32_PB_OUT |= GPIO_Pin_10;  // Set high on entry
+
+    // PB7 (TXD0) as push-pull output 5mA
+    R32_PB_OUT |= GPIO_Pin_7;
+    R32_PB_DIR |= GPIO_Pin_7;
+    R32_PB_PD_DRV &= ~GPIO_Pin_7;
 
     // UART0: 115200 baud @ 32MHz (default clock), 8N1
     // Divisor = (10 * 32000000 / 8 / 115200 + 5) / 10 = 35
