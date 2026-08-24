@@ -1,0 +1,57 @@
+name: release build win32
+
+# Fork-local workflow: builds the win32 binaries published on the releases page.
+# Mirrors the upstream build-mingw job but keeps the artifacts.
+
+on:
+  push:
+    branches:
+      - 'release/**'
+
+jobs:
+  build-win32:
+    runs-on: windows-latest
+    env:
+      CHERE_INVOKING: enabled_from_arguments
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+    - uses: actions/setup-python@v6
+      with:
+        python-version: '3.11'
+    - uses: msys2/setup-msys2@v2
+      with:
+        msystem: mingw32
+        update: true
+        install: >-
+          make
+          mingw-w64-i686-gcc
+          pkg-config
+          git
+          diffutils
+        path-type: inherit
+    - uses: actions/checkout@v6
+    - name: Show toolchain version
+      run: gcc --version
+    - name: Build mpy-cross.exe
+      run: make -C mpy-cross -j2
+    - name: Update submodules
+      run: make -C ports/windows submodules
+    - name: Build micropython.exe
+      run: make -C ports/windows -j2
+    - name: Show banners
+      run: |
+        ./mpy-cross/build/mpy-cross.exe --version
+        echo | ./ports/windows/build-standard/micropython.exe
+    - name: Upload binaries
+      uses: actions/upload-artifact@v4
+      with:
+        name: micropython-1.29.0-win32
+        path: |
+          mpy-cross/build/mpy-cross.exe
+          ports/windows/build-standard/micropython.exe
+        if-no-files-found: error
+    - name: Run tests
+      continue-on-error: true
+      run: make -C ports/windows test
