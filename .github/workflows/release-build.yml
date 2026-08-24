@@ -32,6 +32,10 @@ jobs:
           diffutils
         path-type: inherit
     - uses: actions/checkout@v6
+      with:
+        # Full history and tags: py/makeversionhdr.py runs "git describe
+        # --match v[1-9].*" and falls back to a bare commit hash otherwise.
+        fetch-depth: 0
     - name: Show toolchain version
       run: gcc --version
     - name: Build mpy-cross.exe
@@ -43,7 +47,8 @@ jobs:
     - name: Show banners
       run: |
         ./mpy-cross/build/mpy-cross.exe --version
-        echo | ./ports/windows/build-standard/micropython.exe
+        # The REPL banner needs a tty, so ask the interpreter directly.
+        ./ports/windows/build-standard/micropython.exe -c "import sys; print(sys.version)"
     - name: Upload binaries
       uses: actions/upload-artifact@v4
       with:
